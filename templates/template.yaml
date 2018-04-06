@@ -1,0 +1,17 @@
+api_calls:
+  # first call
+  - path: /cli/global/system/admin/setting
+    method: GET
+    data:
+    recoverable_codes: [0]
+    nonrecoverable_codes: []
+    response_translation:
+    response_expectation:
+#
+#  - path: /cli/global/system/admin/profile
+#    method: GET
+#    data:
+#    recoverable_codes: []
+#    nonrecoverable_codes: []
+#    response_translation:
+#    response_expectation:
