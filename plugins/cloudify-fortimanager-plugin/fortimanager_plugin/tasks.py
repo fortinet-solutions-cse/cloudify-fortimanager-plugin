@@ -56,10 +56,14 @@ def execute(params, template_file, **kwargs):
                 request_props))
 
     except exceptions.NonRecoverableResponseException as e:
+        ctx.logger.debug(
+            '--sss--> Nonrecoverable: {}'.format(e))
         raise NonRecoverableError(e)
 
     except (exceptions.RecoverableResponseException,
             exceptions.RecoverableStatusCodeCodeException)as e:
+        ctx.logger.debug(
+            '--sss--> Recoverable: {}'.format(e))
         raise RecoverableError(e)
 
     except Exception as e:

@@ -30,6 +30,8 @@ from .exceptions import (
     RecoverableResponseException)
 
 from pyFMG.fortimgr import FortiManager
+import itertools
+
 
 logger = logging.getLogger(LOGGER_NAME)
 
@@ -83,18 +85,24 @@ def _send_request(call):
     method = call.get('method')
     data = call.get('data', {})
 
-    with FortiManager(host,
+    fmg_instance = FortiManager(host,
                       username,
                       password,
                       debug=False,
                       use_ssl=use_ssl,
                       verify_ssl=verify_ssl,
-                      disable_request_warnings=True) as fmg_instance:
-        if method == "GET":
-            response = fmg_instance.get(url)
-            logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-            _check_response_status_code(response, call)
-            return response
+                      disable_request_warnings=True)
+
+    if method == "GET":
+        fmg_instance.login()
+        response = fmg_instance.get(url)
+        logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
+        _check_response_status_code(response, call)
+        _check_response_expectations(response, call, is_recoverable=False)
+        _check_response_expectations(response, call, is_recoverable=True)
+        fmg_instance.logout()
+        return response
+
         # if method == "ADD":
         #     response = fmg_instance.add(url, **data)
         #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
@@ -138,18 +146,114 @@ def _check_response_status_code(response, call):
     nonrecoverable_codes = call.get('nonrecoverable_codes', [])
     recoverable_codes = call.get('recoverable_codes', [])
 
-    logger.debug('RESPCODE: %s' % type(response_code))
-    logger.debug('RECCODE: %s' % type(recoverable_codes[0]))
-    logger.debug('RESPCODE == RECCODE: %s' % response_code == recoverable_codes[0])
+    if not response:
+        return
 
     if response_code == 1:
-        logger.debug('--???->response code: \n {}'.format(response_code))
+        logger.debug('Response code: \n {}'.format(response_code))
         raise NonRecoverableResponseException(response_error_message)
 
     if response_code in nonrecoverable_codes:
-        logger.debug('--!!!->response code: \n {}'.format(response_code))
+        logger.debug('Non recoverable code found:\n {}'.format(response_code))
         raise NonRecoverableResponseException('nonrecoverable_code: {}'.format(response_code))
 
     if response_code in recoverable_codes:
-        logger.debug('--xxx-->response_code: \n {}'.format(response_code))
+        logger.debug('Recoverable code found:\n {}'.format(response_code))
         raise RecoverableResponseException('recoverable_code: {}'.format(response_code))
+
+
+def _check_response_expectations(response, call, is_recoverable):
+    response_content = response[1]
+
+    if is_recoverable:
+        recoverable_code = call.get('recoverable_code', [])
+
+        if not recoverable_code:
+            return
+
+        pattern = recoverable_code[:]
+        pattern.pop(-1)
+
+        response_value = _get_response_value(response_content, pattern)
+        expected_value = recoverable_code[-1]
+
+        if response_value is not expected_value:
+            raise RecoverableResponseException(
+                'Trying one more time...\n'
+                'Response value:{0} does not match expected value: {1} '
+                'from recoverable_code {2}'.format(str(response_value),
+                                                   str(expected_value),
+                                                   str(recoverable_code))
+            )
+
+    if not is_recoverable:
+        nonrecoverable_code = call.get('nonrecoverable_code', [])
+
+        if not nonrecoverable_code:
+            return
+
+        pattern = nonrecoverable_code[:]
+        pattern.pop(-1)
+
+        response_value = _get_response_value(response_content, pattern)
+        expected_value = nonrecoverable_code[-1]
+
+        if response_value is expected_value:
+            raise NonRecoverableResponseException(
+                'Giving up...\n'
+                'Response value:{0} matches expected value: {1} '
+                'from nonrecoverable_code {2}'.format(str(response_value),
+                                                      str(expected_value),
+                                                      str(nonrecoverable_code))
+            )
+
+
+def _get_response_value(response,
+                        pattern,
+                        raise_if_not_found=True):
+    def str_list(li):
+        return [str(item) for item in li]
+
+    logger.debug('-->>>Response type: \n {}'.format(type(response)))
+    logger.debug('-->>>Response : \n {}'.format(response))
+    logger.debug('-->>>Pattern : \n {}'.format(pattern))
+
+    value = response
+    for p in pattern:
+        if isinstance(value, dict):
+            if p not in value:
+                if raise_if_not_found:
+                    raise KeyError(
+                        'Key:{0} from pattern {1}'
+                        'does not exist in response:{2}'.format(p,
+                                                                str_list(pattern),
+                                                                response)
+                    )
+                return None
+            else:
+                value = value[p]
+        elif isinstance(value, list):
+            try:
+                value = value[p]
+            except TypeError:
+                raise TypeError(
+                    'List item:{0} from pattern:{1}'
+                    ' must be int but is:{2}'.format(p,
+                                                     str_list(pattern),
+                                                     type(p))
+                )
+            except IndexError:
+                if raise_if_not_found:
+                    raise IndexError(
+                        'List index is out of range. Got {0} but '
+                        'list size is {1}'.format(p, len(value))
+                    )
+                return None
+        else:
+            if raise_if_not_found:
+                raise KeyError(
+                    'Key does not exist'
+                )
+            return None
+
+    return value

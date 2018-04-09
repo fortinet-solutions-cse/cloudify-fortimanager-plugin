@@ -3,10 +3,9 @@ api_calls:
   - path: /cli/global/system/admin/setting
     method: GET
     data:
-    recoverable_codes: [0]
-    nonrecoverable_codes: []
+    recoverable_code: ['access-banner', 1]
+    nonrecoverable_code: ['access-banner', 0]
     response_translation:
-    response_expectation:
 #
 #  - path: /cli/global/system/admin/profile
 #    method: GET
@@ -14,4 +13,3 @@ api_calls:
 #    recoverable_codes: []
 #    nonrecoverable_codes: []
 #    response_translation:
-#    response_expectation:
