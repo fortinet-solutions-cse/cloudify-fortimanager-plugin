@@ -45,7 +45,12 @@ def process(params, template, request_props):
         'template: {}\n'
         'request_props: {}'.format(params, template, request_props))
 
+    logger.debug('template type: \n {}'.format(type(template)))
+    logger.debug('template: \n {}'.format(template))
+
+
     template_yaml = yaml.load(template)
+    logger.debug('template_yaml: \n {}'.format(template_yaml))
 
     result_properties = {}
 
@@ -82,8 +87,8 @@ def _send_request(call):
     verify_ssl = call.get('verify_ssl', False)
 
     url = call.get('path')
-    method = call.get('method')
     data = call.get('data', {})
+    method = call.get('method')
 
     fmg_instance = FortiManager(host,
                       username,
@@ -103,11 +108,14 @@ def _send_request(call):
         fmg_instance.logout()
         return response
 
-        # if method == "ADD":
-        #     response = fmg_instance.add(url, **data)
-        #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        #     _check_response_status_code(response, call)
-        #     return response
+    if method == "ADD":
+        fmg_instance.login()
+        response = fmg_instance.add(url, **data)
+        logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
+        _check_response_status_code(response, call)
+        fmg_instance.logout()
+        return response
+
         # if method == "UPDATE":
         #     response = fmg_instance.add(url, **data)
         #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
@@ -118,11 +126,15 @@ def _send_request(call):
         #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
         #     _check_response_status_code(response, call)
         #     return response
-        # if method == "DELETE":
-        #     response = fmg_instance.add(url, **data)
-        #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        #     _check_response_status_code(response, call)
-        #     return response
+
+    if method == "DELETE":
+        fmg_instance.login()
+        response = fmg_instance.delete(url)
+        logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
+        _check_response_status_code(response, call)
+        fmg_instance.logout()
+        return response
+
         # if method == "REPLACE":
         #     response = fmg_instance.add(url, **data)
         #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
@@ -150,15 +162,15 @@ def _check_response_status_code(response, call):
         return
 
     if response_code == 1:
-        logger.debug('Response code: \n {}'.format(response_code))
+        logger.debug('Response code: {}'.format(response_code))
         raise NonRecoverableResponseException(response_error_message)
 
     if response_code in nonrecoverable_codes:
-        logger.debug('Non recoverable code found:\n {}'.format(response_code))
+        logger.debug('Non recoverable code found: {}'.format(response_code))
         raise NonRecoverableResponseException('nonrecoverable_code: {}'.format(response_code))
 
     if response_code in recoverable_codes:
-        logger.debug('Recoverable code found:\n {}'.format(response_code))
+        logger.debug('Recoverable code found: {}'.format(response_code))
         raise RecoverableResponseException('recoverable_code: {}'.format(response_code))
 
 

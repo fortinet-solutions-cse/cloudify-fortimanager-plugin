@@ -1,12 +1,8 @@
 api_calls:
   # first call
-  - path: /dvmdb/adom/root/group/sgGroup-3
-    method: ADD
+  - path: /dvmdb/adom/root/group/{{DEVICE_GROUP_NAME}}
+    method: DELETE
     data:
-      name: "sgGroup-3"
-      desc: "sgGroup-3-Description"
-      os_type: "fos"
-      type: "normal"
     recoverable_code:
     nonrecoverable_code:
     response_translation:
