@@ -12,25 +12,17 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the Licens
-from cloudify.exceptions import NonRecoverableError, RecoverableError
-import traceback
 import yaml
 import logging
 import ast
-import re
-import xmltodict
 from jinja2 import Template
-import requests
+
 from . import LOGGER_NAME
 from .exceptions import (
-    RecoverableStatusCodeCodeException,
-    ExpectationException,
-    WrongTemplateDataException,
     NonRecoverableResponseException,
     RecoverableResponseException)
 
 from pyFMG.fortimgr import FortiManager
-import itertools
 
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -73,8 +65,10 @@ def process(params, template, request_props):
         logger.info(
             'call_with_request_props: \n {}'.format(call_with_request_props))
         response = _send_request(call_with_request_props)
- #       _process_response(response, call, result_properties)
-    return result_properties
+        logger.debug('---rrr--->: \n {}'.format(response))
+        _process_response(response, call)
+
+    return {call.get('response_translation', "response"): response[1]}
 
 
 def _send_request(call):
@@ -98,58 +92,39 @@ def _send_request(call):
                       verify_ssl=verify_ssl,
                       disable_request_warnings=True)
 
+    fmg_instance.login()
+
     if method == "GET":
-        fmg_instance.login()
         response = fmg_instance.get(url)
         logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        _check_response_status_code(response, call)
-        _check_response_expectations(response, call, is_recoverable=False)
-        _check_response_expectations(response, call, is_recoverable=True)
-        fmg_instance.logout()
-        return response
 
     if method == "ADD":
-        fmg_instance.login()
         response = fmg_instance.add(url, **data)
         logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        _check_response_status_code(response, call)
-        fmg_instance.logout()
-        return response
-
-        # if method == "UPDATE":
-        #     response = fmg_instance.add(url, **data)
-        #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        #     _check_response_status_code(response, call)
-        #     return response
-        # if method == "SET":
-        #     response = fmg_instance.add(url, **data)
-        #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        #     _check_response_status_code(response, call)
-        #     return response
 
     if method == "DELETE":
-        fmg_instance.login()
         response = fmg_instance.delete(url)
         logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        _check_response_status_code(response, call)
-        fmg_instance.logout()
-        return response
 
+
+        # if method == "UPDATE":
+        # if method == "SET":
         # if method == "REPLACE":
-        #     response = fmg_instance.add(url, **data)
-        #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        #     _check_response_status_code(response, call)
-        #     return response
         # if method == "CLONE":
-        #     response = fmg_instance.add(url, **data)
-        #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        #     _check_response_status_code(response, call)
-        #     return response
         # if method == "EXECUTE":
-        #     response = fmg_instance.add(url, **data)
-        #     logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
-        #     _check_response_status_code(response, call)
-        #     return response
+
+    fmg_instance.logout()
+    return response
+
+
+def _process_response(response, call):
+    _check_response_status_code(response, call)
+    if call.get('nonrecoverable_code', []):
+        _check_response_expectations(response, call, is_recoverable=False)
+    if call.get('recoverable_code', []):
+        _check_response_expectations(response, call, is_recoverable=True)
+
+
 
 
 def _check_response_status_code(response, call):

@@ -1,16 +1,4 @@
 api_calls:
-  # first call
-  - path: /dvmdb/adom/root/group/sgGroup-3
-    method: ADD
-    data:
-      name: "sgGroup-3"
-      desc: "sgGroup-3-Description"
-      os_type: "fos"
-      type: "normal"
-    recoverable_code:
-    nonrecoverable_code:
-    response_translation:
-
 #  - path: /cli/global/system/admin/setting
 #    method: GET
 #    data:
