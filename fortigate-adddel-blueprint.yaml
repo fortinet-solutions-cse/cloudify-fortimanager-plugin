@@ -24,7 +24,7 @@ node_templates:
             template_file: templates/add-fortigate.yaml
             params:
               fgt_password: "fortinet"
-              fgt_ip: "192.168.1.14"
+              fgt_ip: "192.168.1.13"
               fgt_user: "admin"
               fgt_name: "branchea_fortigate"
         stop:
