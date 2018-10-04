@@ -7,7 +7,7 @@ imports:
 
 inputs:
   device_group_name:
-    default: "tosca-device-group"
+    default: "sg-device-group-1"
 
   device_group_description:
     default: "Fresh nice group"
@@ -17,10 +17,10 @@ node_templates:
   device-group:
     type: cloudify.fortinet.fortimanager
     properties:
-      host: "89.46.83.153"
+      host: "10.239.1.48"
       username: "admin"
-      password: { get_secret: fmg_password }
-      use_ssl: True
+      password: ""
+      use_ssl: False
       verify_ssl: False
     interfaces:
       cloudify.interfaces.lifecycle:
@@ -35,27 +35,3 @@ node_templates:
             template_file: templates/delete-group-template.yaml
             params:
               DEVICE_GROUP_NAME: { get_input: device_group_name }
-
-  add-fortigate:
-    type: cloudify.fortinet.fortimanager
-    properties:
-      host: "89.46.83.153"
-      username: "admin"
-      password: { get_secret: fmg_password }
-      use_ssl: True
-      verify_ssl: False
-    interfaces:
-      cloudify.interfaces.lifecycle:
-        start:
-          inputs:
-            template_file: templates/add-fortigate.yaml
-            params:
-              fgt_password: "fortinet"
-              fgt_ip: "192.168.1.14"
-              fgt_user: "admin"
-              fgt_name: "branchea_fortigate"
-        stop:
-          inputs:
-            template_file: templates/remove-fortigate.yaml
-            params:
-              fgt_name: "FGVMUL0000164290"

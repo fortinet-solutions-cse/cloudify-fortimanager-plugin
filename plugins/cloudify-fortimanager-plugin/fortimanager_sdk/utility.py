@@ -111,9 +111,7 @@ def _send_request(call):
         # if method == "SET":
         # if method == "REPLACE":
         # if method == "CLONE":
-    if method == "EXECUTE":
-        response = fmg_instance.execute(url, **data)
-        logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
+        # if method == "EXECUTE":
 
     fmg_instance.logout()
     return response
