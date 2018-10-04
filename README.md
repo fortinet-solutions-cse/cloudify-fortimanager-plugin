@@ -1,2 +1,1 @@
 # cloudify-fortimanager-plugin
-
