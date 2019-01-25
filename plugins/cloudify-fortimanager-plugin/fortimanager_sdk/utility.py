@@ -95,15 +95,15 @@ def _send_request(call):
     fmg_instance.login()
 
     if method == "GET":
-        response = fmg_instance.get(url)
+        code, response = fmg_instance.get(url)
         logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
 
     if method == "ADD":
-        response = fmg_instance.add(url, **data)
+        code, response = fmg_instance.add(url, **data)
         logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
 
     if method == "DELETE":
-        response = fmg_instance.delete(url)
+        code, response = fmg_instance.delete(url)
         logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
 
 
@@ -111,10 +111,12 @@ def _send_request(call):
         # if method == "SET":
         # if method == "REPLACE":
         # if method == "CLONE":
-        # if method == "EXECUTE":
+    if method == "EXECUTE":
+        code, response = fmg_instance.execute(url, **data)
+        logger.debug('---> Method: {} \n code: {} response: \n {}'.format(method, code, response))
 
     fmg_instance.logout()
-    return response
+    return code, response
 
 
 def _process_response(response, call):

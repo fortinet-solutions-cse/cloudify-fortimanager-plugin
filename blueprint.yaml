@@ -12,7 +12,7 @@ node_templates:
   test_node:
     type: cloudify.fortinet.fortimanager
     properties:
-      host: "10.239.1.48"
+      host: "91.106.199.106"
       username: "admin"
       password: ""
       use_ssl: False
