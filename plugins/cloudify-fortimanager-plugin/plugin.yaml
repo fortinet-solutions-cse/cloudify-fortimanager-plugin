@@ -4,7 +4,7 @@ plugins:
     executor: central_deployment_agent
     package_name: cloudify-fortimanager-plugin
     source: cloudify-fortimanager-plugin
-    package_version: '0.0.0.1'
+    package_version: '0.0.0.2'
 
 node_types:
 
@@ -73,3 +73,27 @@ node_types:
             template_file:
               default: ''
 
+relationships:
+  device_in_fmg:
+    derived_from: cloudify.relationships.connected_to
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: fortinet.fortimanager_plugin.tasks.execute_relation
+          inputs:
+            template_file:
+              default: templates/add-fortigate.yaml
+            params:
+              default:
+                fgt_password: "fortinet"
+                fgt_ip: { get_attribute: [TARGET, ip ] }
+                fgt_user: "admin"
+                fgt_name: { get_attribute: [TARGET, server, name ] }
+        unlink:
+          implementation: fortinet.fortimanager_plugin.tasks.execute_relation
+          inputs:
+            template_file:
+              default: templates/remove-fortigate.yaml
+            params:
+              default:
+                fgt_name: { get_attribute: [TARGET, server, name ] }

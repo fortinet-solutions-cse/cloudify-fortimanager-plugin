@@ -71,3 +71,57 @@ def execute(params, template_file, **kwargs):
             'Exception traceback : {}'.format(traceback.format_exc()))
         raise NonRecoverableError(e)
 
+def execute_relation(params, template_file, **kwargs):
+    if not params:
+        params = {}
+
+    if not template_file:
+        ctx.logger.info(
+            'Processing finished. No template file provided.')
+        return
+
+    ctx.logger.debug(
+        'Execute:\n'
+        'params: {}\n'
+        'template_file: {}'.format(params, template_file))
+
+    runtime_properties = ctx.source.node.properties.copy()
+    runtime_properties.update(params)
+
+    ctx.logger.debug(
+        'Runtime properties: {}'.format(runtime_properties))
+
+    template = ctx.get_resource(template_file)
+    request_props = ctx.source.node.properties.copy()
+
+    ctx.logger.debug(
+        'request_props: {}'.format(request_props))
+    ctx.logger.debug(
+        'params: {}'.format(params))
+    ctx.logger.debug(
+        'template_file: {}'.format(template_file))
+
+
+    try:
+        ctx.target.instance.runtime_properties.update(
+            utility.process(
+                params,
+                template,
+                request_props))
+
+    except exceptions.NonRecoverableResponseException as e:
+        ctx.logger.debug(
+            '--sss--> Nonrecoverable: {}'.format(e))
+        raise NonRecoverableError(e)
+
+    except (exceptions.RecoverableResponseException,
+            exceptions.RecoverableStatusCodeCodeException)as e:
+        ctx.logger.debug(
+            '--sss--> Recoverable: {}'.format(e))
+        raise RecoverableError(e)
+
+    except Exception as e:
+        ctx.logger.info(
+            'Exception traceback : {}'.format(traceback.format_exc()))
+        raise NonRecoverableError(e)
+
