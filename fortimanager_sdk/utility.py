@@ -11,8 +11,9 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
-#    * limitations under the Licens
+#    * limitations under the License
 import yaml
+import time
 import logging
 import ast
 from jinja2 import Template
@@ -64,11 +65,11 @@ def process(params, template, request_props):
 
         logger.info(
             'call_with_request_props: \n {}'.format(call_with_request_props))
-        response = _send_request(call_with_request_props)
+        code, response = _send_request(call_with_request_props)
         logger.debug('---rrr--->: \n {}'.format(response))
-        _process_response(response, call)
+        _process_response(code, response, call)
 
-    return {call.get('response_translation', "response"): response[1]}
+    return {call.get('response_translation', "response"): response}
 
 
 def _send_request(call):
@@ -96,45 +97,78 @@ def _send_request(call):
 
     if method == "GET":
         code, response = fmg_instance.get(url)
-        logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
+        logger.debug('---> Method: {} \n code: {} \n response: \n {}'.format(method, code, response))
 
     if method == "ADD":
         code, response = fmg_instance.add(url, **data)
-        logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
+        logger.debug('---> Method: {} \n code: {} \n response: \n {}'.format(method, code, response))
+
+    if method == "UPDATE":
+        code, response = fmg_instance.update(url, **data)
+        logger.debug('---> Method: {} \n code: {} \n response: \n {}'.format(method, code, response))
 
     if method == "DELETE":
         code, response = fmg_instance.delete(url)
-        logger.debug('---> Method: {} \n response: \n {}'.format(method, response))
+        logger.debug('---> Method: {} \n code: {} \n response: \n {}'.format(method, code, response))
 
 
         # if method == "UPDATE":
-        # if method == "SET":
+    if method == "SET":
+        code, response = fmg_instance.set(url, **data)
+        logger.debug('---> Method: {} \n code: {} \n response: \n {}'.format(method, code, response))
+
         # if method == "REPLACE":
         # if method == "CLONE":
-        # if method == "EXECUTE":
+    if method == "EXECUTE":
+        code, response = fmg_instance.execute(url, **data)
+        logger.debug('---> Method: {} \n code: {} \n response: \n {}'.format(method, code, response))
+        task = 0
+        if code == 0:
+            if response.get("taskid"):
+                task = response["taskid"]
+            else:
+                if response.get("task"):
+                    task = response["task"]
+            #create a waiting loop on task completion if task(id) returned
+            if task:
+                status = 0
+                while status < 2 :
+                    # State 0 and 1 are pending/running
+                    ## we should have a taskid in the response
+                    taskurl="/task/task/"+str(task)
+                    tcode, tresponse = fmg_instance.get(taskurl)
+                    logger.debug('---> get Taskid  code: {} response:  {}'.format( tcode, tresponse))
+                    status = tresponse["state"]
+                    # sleep relative to percentage of completions 20s if 100% ..
+                    if tresponse["num_lines"] > 0:
+                        logger.info('---> Taskid {} : percent completion: {}'.format(task,
+                                    tresponse["tot_percent"]/(tresponse["num_lines"])))
+                    time.sleep( (101 - (tresponse["tot_percent"]/(tresponse["num_lines"]+0.1)))/5)
 
     fmg_instance.logout()
     return code, response
 
 
-def _process_response(response, call):
-    _check_response_status_code(response, call)
-    if call.get('nonrecoverable_code', []):
-        _check_response_expectations(response, call, is_recoverable=False)
-    if call.get('recoverable_code', []):
-        _check_response_expectations(response, call, is_recoverable=True)
+def _process_response(code, response, call):
+    _check_response_status_code(code, response, call)
+    if code != 0:
+        if call.get('nonrecoverable_code', []):
+            _check_response_expectations(response, call, is_recoverable=False)
+        if call.get('recoverable_code', []):
+            _check_response_expectations(response, call, is_recoverable=True)
 
 
 
 
-def _check_response_status_code(response, call):
-    response_code = response[0]
-    response_error_message = response[1]
+def _check_response_status_code(code, response, call):
+    response_code = code
+    response_error_message = response
     nonrecoverable_codes = call.get('nonrecoverable_codes', [])
     recoverable_codes = call.get('recoverable_codes', [])
 
     if not response:
         return
+
 
     if response_code == 1:
         logger.debug('Response code: {}'.format(response_code))
@@ -149,8 +183,8 @@ def _check_response_status_code(response, call):
         raise RecoverableResponseException('recoverable_code: {}'.format(response_code))
 
 
-def _check_response_expectations(response, call, is_recoverable):
-    response_content = response[1]
+def _check_response_expectations( response, call, is_recoverable):
+    response_content = response
 
     if is_recoverable:
         recoverable_code = call.get('recoverable_code', [])
