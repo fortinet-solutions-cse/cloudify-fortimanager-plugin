@@ -112,7 +112,10 @@ def _send_request(call):
 
 
         # if method == "UPDATE":
-        # if method == "SET":
+    if method == "SET":
+        code, response = fmg_instance.set(url, **data)
+        logger.debug('---> Method: {} \n code: {} \n response: \n {}'.format(method, code, response))
+
         # if method == "REPLACE":
         # if method == "CLONE":
     if method == "EXECUTE":

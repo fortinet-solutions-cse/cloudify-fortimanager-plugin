@@ -89,6 +89,7 @@ relationships:
                 fgt_ip: { get_attribute: [TARGET, ip ] }
                 fgt_user: "admin"
                 fgt_name: { get_attribute: [TARGET, server, name ] }
+                fmg_package: { get_input: fmg_package }
         unlink:
           implementation: fortinet.fortimanager_plugin.tasks.execute_relation
           inputs:
